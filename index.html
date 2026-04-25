@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="메모리링크">
+<meta name="theme-color" content="#2c1f14">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>메모리 링크 — 할아버지께</title>
+<style>
+/* ── 오프라인 전용: 시스템 한글 폰트 사용 ── */
+:root {
+  --serif: 'Apple SD Gothic Neo', 'Nanum Myeongjo', 'KoPubWorldBatang', Georgia, serif;
+  --sans:  'Apple SD Gothic Neo', 'Malgun Gothic', 'Nanum Gothic', sans-serif;
+  --cream: #faf6ef;
+  --soft:  #e8ddd0;
+  --brown: #6b4c35;
+  --gold:  #c9a96e;
+  --dark:  #2c1f14;
+  --muted: #9a8272;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; overflow:hidden; }
+body { font-family:var(--sans); background:var(--cream); color:var(--dark); }
+
+/* ── VIEWS ── */
+.view { display:none; height:100vh; height:100dvh; flex-direction:column; overflow:hidden; }
+.view.active { display:flex; }
+
+/* ══════════════════════════════
+   LANDING
+══════════════════════════════ */
+#view-landing {
+  align-items:center; justify-content:center;
+  background:var(--dark);
+  position:relative; overflow:hidden;
+}
+#view-landing::before {
+  content:''; position:absolute; inset:0;
+  background:
+    radial-gradient(ellipse at 30% 60%,#4a3020 0%,transparent 60%),
+    radial-gradient(ellipse at 80% 20%,#3d2810 0%,transparent 50%);
+}
+.landing-inner { position:relative; text-align:center; padding:2rem; }
+.landing-icon {
+  width:88px; height:88px; border-radius:50%;
+  background:linear-gradient(135deg,var(--gold),#a07840);
+  margin:0 auto 1.8rem;
+  display:flex; align-items:center; justify-content:center; font-size:2.2rem;
+  animation:breathe 3.5s ease-in-out infinite;
+  box-shadow:0 0 60px rgba(201,169,110,.3);
+}
+@keyframes breathe {
+  0%,100%{ box-shadow:0 0 40px rgba(201,169,110,.15); }
+  50%    { box-shadow:0 0 90px rgba(201,169,110,.5); }
+}
+.landing-title {
+  font-family:var(--serif); font-weight:400;
+  font-size:clamp(1.9rem,6vw,3.2rem);
+  color:var(--cream); letter-spacing:.04em; line-height:1.25;
+  margin-bottom:.5rem;
+}
+.landing-sub {
+  color:var(--gold); font-size:.82rem; letter-spacing:.22em;
+  text-transform:uppercase; margin-bottom:3rem;
+}
+.landing-btns { display:flex; flex-direction:column; align-items:center; gap:.8rem; }
+.btn-gold {
+  background:var(--gold); color:var(--dark); border:none;
+  padding:1rem 2.8rem; border-radius:50px; width:100%; max-width:280px;
+  font-family:var(--sans); font-size:1rem; cursor:pointer; font-weight:600;
+  transition:all .25s;
+}
+.btn-gold:active { transform:scale(.97); }
+.btn-outline {
+  background:transparent; color:rgba(250,246,239,.75);
+  border:1px solid rgba(250,246,239,.25);
+  padding:1rem 2.8rem; border-radius:50px; width:100%; max-width:280px;
+  font-family:var(--sans); font-size:1rem; cursor:pointer;
+  transition:all .25s;
+}
+.btn-outline:active { border-color:var(--gold); color:var(--gold); }
+
+/* ══════════════════════════════
+   UPLOAD
+══════════════════════════════ */
+#view-upload { background:var(--cream); overflow:hidden; }
+.top-bar {
+  display:flex; align-items:center; gap:1rem;
+  padding:1rem 1.2rem; border-bottom:1px solid var(--soft);
+  background:white; flex-shrink:0;
+  padding-top:max(1rem, env(safe-area-inset-top));
+}
+.top-bar-title { font-family:var(--serif); font-size:1rem; color:var(--brown); }
+.back-btn {
+  background:none; border:none; cursor:pointer; color:var(--muted);
+  font-size:.85rem; font-family:var(--sans); padding:.3rem .5rem;
+}
+.upload-scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.upload-body { padding:1.2rem; max-width:640px; margin:0 auto; }
+
+.memory-card {
+  background:white; border-radius:16px; padding:1.3rem;
+  margin-bottom:1rem; box-shadow:0 2px 10px rgba(107,76,53,.07);
+  border:1px solid var(--soft);
+}
+.card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+.card-num  { font-family:var(--serif); color:var(--gold); font-size:.85rem; }
+.del-btn   { background:none; border:none; cursor:pointer; color:var(--muted); font-size:.78rem; padding:.3rem; }
+
+.photo-drop {
+  border:2px dashed var(--soft); border-radius:12px;
+  text-align:center; cursor:pointer;
+  margin-bottom:1rem; position:relative; overflow:hidden;
+  transition:border-color .2s;
+}
+.photo-drop:active { border-color:var(--gold); }
+.photo-drop input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.drop-inner { padding:1.2rem; pointer-events:none; }
+.drop-icon  { font-size:1.7rem; margin-bottom:.3rem; }
+.drop-text  { color:var(--muted); font-size:.8rem; line-height:1.5; }
+.photo-preview { width:100%; max-height:200px; object-fit:cover; border-radius:10px; display:none; }
+
+label.lbl { display:block; font-size:.72rem; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.3rem; }
+.field {
+  width:100%; border:1px solid var(--soft); border-radius:8px;
+  padding:.62rem .9rem; font-family:var(--sans); font-size:.88rem;
+  color:var(--dark); background:var(--cream); outline:none;
+  margin-bottom:.75rem; appearance:none;
+  transition:border-color .2s;
+}
+.field:focus { border-color:var(--gold); }
+textarea.field { resize:vertical; min-height:76px; }
+.story-hint {
+  background:#fdf9f4; border:1px solid var(--soft); border-radius:8px;
+  padding:.65rem .9rem; font-size:.76rem; color:var(--muted);
+  margin-bottom:.75rem; line-height:1.65;
+}
+.story-hint strong { color:var(--brown); }
+
+.add-card-btn {
+  width:100%; background:none; border:2px dashed var(--gold); border-radius:12px;
+  padding:.9rem; color:var(--gold); font-family:var(--sans); font-size:.9rem;
+  cursor:pointer; margin-bottom:1.2rem;
+}
+.submit-section { text-align:center; padding-bottom:max(2.5rem, env(safe-area-inset-bottom)); }
+.btn-start {
+  background:var(--brown); color:var(--cream); border:none;
+  padding:1rem 3rem; border-radius:50px; font-family:var(--serif);
+  font-size:1rem; cursor:pointer; letter-spacing:.04em;
+  transition:background .25s;
+}
+.btn-start:active { background:var(--dark); }
+
+/* ══════════════════════════════
+   SLIDESHOW
+══════════════════════════════ */
+#view-slideshow { background:#120c04; }
+
+.slide-area {
+  flex:1; position:relative; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+}
+.slide {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:1.5rem; text-align:center;
+  opacity:0; transition:opacity 1.4s ease;
+}
+.slide.active { opacity:1; }
+
+.photo-frame {
+  width:min(380px,82vw); aspect-ratio:4/3;
+  border-radius:3px; overflow:hidden;
+  box-shadow:0 16px 70px rgba(0,0,0,.9);
+  margin-bottom:1.6rem; position:relative; flex-shrink:0;
+}
+.photo-frame::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(to bottom,transparent 50%,rgba(18,12,4,.55));
+}
+.photo-frame img { width:100%; height:100%; object-fit:cover; filter:sepia(12%) contrast(.94) brightness(.96); }
+.no-photo {
+  width:100%; height:100%;
+  background:linear-gradient(135deg,#3a2510,#6b4c35);
+  display:flex; align-items:center; justify-content:center; font-size:3rem;
+}
+.slide-when {
+  color:var(--gold); font-size:.72rem; letter-spacing:.18em;
+  text-transform:uppercase; margin-bottom:.8rem; font-family:var(--sans);
+}
+.slide-story {
+  max-width:480px; font-family:var(--serif); font-weight:400;
+  font-size:clamp(.95rem,2.8vw,1.15rem); color:#efe5d2;
+  line-height:1.95; letter-spacing:.02em;
+}
+.slide-who { margin-top:.9rem; color:var(--muted); font-size:.78rem; letter-spacing:.06em; }
+
+/* progress */
+.prog-wrap { height:2px; background:rgba(201,169,110,.12); flex-shrink:0; }
+.prog-bar  { height:100%; background:var(--gold); width:0%; }
+
+/* controls */
+.controls {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:.85rem 1.3rem;
+  padding-bottom:max(.85rem, env(safe-area-inset-bottom));
+  background:rgba(0,0,0,.55); backdrop-filter:blur(14px);
+  flex-shrink:0;
+}
+.dots { display:flex; gap:.45rem; }
+.dot  {
+  width:7px; height:7px; border-radius:50%;
+  background:rgba(201,169,110,.25); cursor:pointer; transition:all .35s;
+}
+.dot.active { background:var(--gold); transform:scale(1.5); }
+.ctrl-mid { display:flex; align-items:center; gap:.7rem; }
+.nav-btn {
+  width:42px; height:42px; border-radius:50%; cursor:pointer;
+  background:none; border:1px solid rgba(201,169,110,.28);
+  color:var(--gold); font-size:1.2rem;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .2s;
+}
+.nav-btn:active { border-color:var(--gold); background:rgba(201,169,110,.12); }
+.counter { color:var(--muted); font-size:.78rem; font-family:var(--serif); min-width:48px; text-align:center; }
+.family-btn {
+  background:none; border:none; cursor:pointer;
+  color:rgba(154,130,114,.45); font-size:.7rem;
+  font-family:var(--sans); letter-spacing:.04em; padding:.3rem;
+}
+.family-btn:active { color:var(--gold); }
+
+/* install banner */
+.install-banner {
+  display:none; position:fixed; bottom:0; left:0; right:0;
+  background:var(--dark); border-top:1px solid var(--gold);
+  padding:1rem 1.5rem; z-index:100;
+  align-items:center; justify-content:space-between; gap:1rem;
+}
+.install-banner.show { display:flex; }
+.install-text { color:var(--cream); font-size:.85rem; line-height:1.4; }
+.install-text small { color:var(--muted); font-size:.75rem; }
+.install-btns { display:flex; gap:.5rem; flex-shrink:0; }
+.btn-install { background:var(--gold); color:var(--dark); border:none; padding:.5rem 1rem; border-radius:20px; font-size:.82rem; cursor:pointer; font-weight:600; }
+.btn-dismiss { background:none; border:none; color:var(--muted); font-size:.82rem; cursor:pointer; padding:.5rem; }
+
+/* ── 저장 상태 표시 ── */
+.save-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:.6rem 1.2rem; background:#fdf9f4; border-bottom:1px solid var(--soft);
+  font-size:.75rem; color:var(--muted); flex-shrink:0;
+}
+.save-status { display:flex; align-items:center; gap:.4rem; }
+.save-dot { width:6px; height:6px; border-radius:50%; background:var(--muted); }
+.save-dot.saved  { background:#7cb87c; }
+.save-dot.saving { background:var(--gold); animation:pulse .8s ease-in-out infinite; }
+.save-dot.error  { background:#c0392b; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.save-usage { font-size:.7rem; }
+.clear-btn {
+  background:none; border:1px solid var(--soft); border-radius:12px;
+  padding:.25rem .7rem; font-size:.72rem; color:var(--muted);
+  cursor:pointer; font-family:var(--sans); transition:all .2s;
+}
+.clear-btn:active { border-color:#c0392b; color:#c0392b; }
+
+/* ── Firebase / 공유 UI ── */
+#view-setup {
+  align-items:center; justify-content:center;
+  background:var(--dark); position:relative; overflow:hidden;
+}
+#view-setup::before {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(ellipse at 40% 50%,#3d2810 0%,transparent 60%);
+}
+.setup-inner { position:relative; width:100%; max-width:380px; padding:2rem 1.5rem; }
+.setup-title {
+  font-family:var(--serif); color:var(--cream); font-size:1.4rem;
+  font-weight:400; margin-bottom:.4rem; text-align:center;
+}
+.setup-sub { color:var(--muted); font-size:.82rem; text-align:center; margin-bottom:2rem; line-height:1.6; }
+
+.setup-card {
+  background:rgba(255,255,255,.05); border:1px solid rgba(201,169,110,.2);
+  border-radius:16px; padding:1.4rem; margin-bottom:1rem;
+}
+.setup-card-title { color:var(--gold); font-size:.75rem; letter-spacing:.12em; text-transform:uppercase; margin-bottom:1rem; }
+.setup-field {
+  width:100%; background:rgba(0,0,0,.3); border:1px solid rgba(201,169,110,.2);
+  border-radius:8px; padding:.7rem 1rem; color:var(--cream);
+  font-family:var(--sans); font-size:.88rem; outline:none;
+  margin-bottom:.7rem; transition:border-color .2s;
+}
+.setup-field:focus { border-color:var(--gold); }
+.setup-field::placeholder { color:rgba(154,130,114,.6); }
+.setup-hint { color:var(--muted); font-size:.72rem; line-height:1.6; margin-top:.3rem; }
+.setup-hint a { color:var(--gold); }
+
+.btn-setup-primary {
+  width:100%; background:var(--gold); color:var(--dark); border:none;
+  padding:.9rem; border-radius:50px; font-family:var(--sans);
+  font-size:.95rem; cursor:pointer; font-weight:600; margin-top:.5rem;
+  transition:all .25s;
+}
+.btn-setup-primary:active { opacity:.85; }
+.btn-setup-primary:disabled { opacity:.4; cursor:not-allowed; }
+.btn-setup-back {
+  width:100%; background:none; border:none; color:var(--muted);
+  padding:.7rem; font-family:var(--sans); font-size:.82rem;
+  cursor:pointer; margin-top:.3rem;
+}
+
+/* 공유 상태 배지 — top-bar 오른쪽 */
+.cloud-badge {
+  margin-left:auto; display:flex; align-items:center; gap:.35rem;
+  font-size:.72rem; color:var(--muted); cursor:pointer; padding:.2rem .5rem;
+  border:1px solid var(--soft); border-radius:12px; transition:all .2s;
+}
+.cloud-badge:hover { border-color:var(--gold); color:var(--brown); }
+.cloud-dot { width:6px; height:6px; border-radius:50%; background:var(--muted); }
+.cloud-dot.on  { background:#7cb87c; animation:pulse .8s ease-in-out infinite; }
+.cloud-dot.err { background:#c0392b; }
+
+/* 룸코드 배너 */
+.room-banner {
+  background:linear-gradient(90deg,#2c1f14,#4a3020);
+  border-bottom:1px solid rgba(201,169,110,.2);
+  padding:.55rem 1.2rem; display:none;
+  align-items:center; gap:.8rem; flex-shrink:0;
+}
+.room-banner.show { display:flex; }
+.room-code {
+  font-family:var(--serif); color:var(--gold); font-size:1rem;
+  letter-spacing:.2em; font-weight:600;
+}
+.room-label { color:var(--muted); font-size:.72rem; }
+.copy-btn {
+  margin-left:auto; background:rgba(201,169,110,.15); border:1px solid rgba(201,169,110,.3);
+  color:var(--gold); border-radius:8px; padding:.28rem .7rem;
+  font-size:.72rem; cursor:pointer; font-family:var(--sans);
+  transition:all .2s; white-space:nowrap;
+}
+.copy-btn:active { background:rgba(201,169,110,.3); }
+
+/* 실시간 수신 토스트 */
+.toast {
+  position:fixed; bottom:5rem; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--dark); border:1px solid var(--gold); border-radius:20px;
+  padding:.55rem 1.2rem; color:var(--cream); font-size:.82rem;
+  opacity:0; transition:all .35s; z-index:200; white-space:nowrap;
+  pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+</style>
+</head>
+<body>
+
+
+<!-- FIREBASE SETUP -->
+<div class="view" id="view-setup">
+  <div class="setup-inner">
+    <h2 class="setup-title">가족 공유 설정</h2>
+    <p class="setup-sub">Firebase를 연결하면 가족 모두가<br>같은 추억을 함께 볼 수 있어요</p>
+
+    <div class="setup-card">
+      <div class="setup-card-title">Firebase 설정값 입력</div>
+      <input class="setup-field" id="fb-apiKey"     placeholder="apiKey">
+      <input class="setup-field" id="fb-projectId"  placeholder="projectId">
+      <input class="setup-field" id="fb-appId"      placeholder="appId">
+      <p class="setup-hint">
+        <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a>
+        → 프로젝트 설정 → 앱 → SDK 구성에서 복사하세요
+      </p>
+    </div>
+
+    <div class="setup-card">
+      <div class="setup-card-title">룸 코드</div>
+      <input class="setup-field" id="fb-roomCode"
+             placeholder="예) GRANDPA-2024  (가족이 같은 코드 사용)"
+             style="letter-spacing:.1em; text-transform:uppercase">
+      <p class="setup-hint">가족 모두 같은 코드를 쓰면 자동으로 동기화돼요</p>
+    </div>
+
+    <button class="btn-setup-primary" id="fbConnectBtn" onclick="connectFirebase()">연결하기</button>
+    <button class="btn-setup-back"    onclick="show('landing')">← 취소</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- LANDING -->
+<div class="view active" id="view-landing">
+  <div class="landing-inner">
+    <div class="landing-icon">📷</div>
+    <h1 class="landing-title">메모리 링크</h1>
+    <p class="landing-sub">할아버지께 드리는 추억</p>
+    <div class="landing-btns">
+      <button class="btn-gold"    onclick="show('upload')">추억 올리기 — 가족용</button>
+      <button class="btn-outline" onclick="goGrandpa()">할아버지 화면 열기</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD -->
+<div class="view" id="view-upload">
+  <div class="top-bar">
+    <button class="back-btn" onclick="show('landing')">← 돌아가기</button>
+    <span class="top-bar-title">추억 올리기</span>
+    <div class="cloud-badge" id="cloudBadge" onclick="show('setup')" title="가족 공유 설정">
+      <div class="cloud-dot" id="cloudDot"></div>
+      <span id="cloudLabel">공유 설정</span>
+    </div>
+  </div>
+  <div class="room-banner" id="roomBanner">
+    <div>
+      <div class="room-label">룸 코드</div>
+      <div class="room-code" id="roomCodeDisplay"></div>
+    </div>
+    <button class="copy-btn" onclick="copyRoomCode()">코드 복사</button>
+  </div>
+  <div class="save-bar" id="saveBar">
+    <div class="save-status">
+      <div class="save-dot" id="saveDot"></div>
+      <span id="saveMsg">저장된 추억 없음</span>
+    </div>
+    <span class="save-usage" id="saveUsage"></span>
+    <button class="clear-btn" onclick="clearStorage()">전체 삭제</button>
+  </div>
+  <div class="upload-scroll">
+    <div class="upload-body">
+      <div id="card-list"></div>
+      <button class="add-card-btn" onclick="addCard()">+ 추억 한 장 더 추가</button>
+      <div class="submit-section">
+        <button class="btn-start" onclick="startShow()">슬라이드쇼 시작 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDESHOW -->
+<div class="view" id="view-slideshow">
+  <div class="slide-area" id="slideArea"></div>
+  <div class="prog-wrap"><div class="prog-bar" id="progBar"></div></div>
+  <div class="controls">
+    <button class="family-btn" onclick="show('landing')">가족 화면</button>
+    <div class="ctrl-mid">
+      <button class="nav-btn" onclick="prev()">&#8249;</button>
+      <span class="counter" id="counter">1 / 1</span>
+      <button class="nav-btn" onclick="next()">&#8250;</button>
+    </div>
+    <div class="dots" id="dots"></div>
+  </div>
+</div>
+
+<!-- iOS 설치 안내 배너 -->
+<div class="install-banner" id="installBanner">
+  <div class="install-text">
+    홈 화면에 추가하면 오프라인으로 사용할 수 있어요<br>
+    <small>Safari 아래 공유버튼 → "홈 화면에 추가"</small>
+  </div>
+  <div class="install-btns">
+    <button class="btn-dismiss" onclick="dismissBanner()">닫기</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── PWA 서비스워커 등록 ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js')
+      .then(function(reg) { console.log('SW 등록됨:', reg.scope); })
+      .catch(function(e) { console.log('SW 실패:', e); });
+  });
+}
+
+// ── iOS 홈화면 설치 배너 ──
+var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+var isStandalone = window.navigator.standalone === true;
+if (isIOS && !isStandalone && !sessionStorage.getItem('banner-dismissed')) {
+  setTimeout(function() {
+    document.getElementById('installBanner').classList.add('show');
+  }, 2500);
+}
+function dismissBanner() {
+  document.getElementById('installBanner').classList.remove('show');
+  sessionStorage.setItem('banner-dismissed', '1');
+}
+
+// ── Android 설치 프롬프트 ──
+var deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  // 안드로이드는 배너 대신 네이티브 프롬프트 지원
+  var banner = document.getElementById('installBanner');
+  banner.querySelector('.install-text').innerHTML =
+    '홈 화면에 앱으로 설치할 수 있어요<br><small>설치하면 오프라인에서도 사용 가능</small>';
+  var btns = banner.querySelector('.install-btns');
+  var installBtn = document.createElement('button');
+  installBtn.className = 'btn-install';
+  installBtn.textContent = '설치';
+  installBtn.onclick = function() {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function() { deferredPrompt = null; });
+    dismissBanner();
+  };
+  btns.insertBefore(installBtn, btns.firstChild);
+  setTimeout(function() { banner.classList.add('show'); }, 2000);
+});
+
+
+// ══════════════════════════════
+//  STORAGE — IndexedDB + LocalStorage fallback
+// ══════════════════════════════
+var DB_NAME = 'memory-link';
+var DB_VER  = 1;
+var db = null;
+
+function openDB(cb) {
+  if (db) { cb(db); return; }
+  var req = indexedDB.open(DB_NAME, DB_VER);
+  req.onupgradeneeded = function(e) {
+    e.target.result.createObjectStore('slides', { keyPath: 'id' });
+  };
+  req.onsuccess = function(e) { db = e.target.result; cb(db); };
+  req.onerror   = function()  { cb(null); };
+}
+
+// 저장 ─ slides[] 전체를 IndexedDB에 씀
+function saveToStorage() {
+  setSaveDot('saving', '저장 중...');
+  var payload = slides.map(function(s, i) {
+    return { id: i, photo: s.photo, when: s.when, who: s.who, story: s.story };
+  });
+
+  openDB(function(database) {
+    if (!database) { saveToLS(payload); return; }
+    var tx    = database.transaction('slides', 'readwrite');
+    var store = tx.objectStore('slides');
+    store.clear();
+    payload.forEach(function(item) { store.put(item); });
+    tx.oncomplete = function() {
+      setSaveDot('saved', '추억 ' + slides.length + '장 저장됨');
+      updateUsage();
+    };
+    tx.onerror = function() { saveToLS(payload); };
+  });
+}
+
+// IndexedDB 실패 시 LocalStorage fallback (사진 제외)
+function saveToLS(payload) {
+  try {
+    var light = payload.map(function(s) {
+      return { id:s.id, photo:null, when:s.when, who:s.who, story:s.story };
+    });
+    localStorage.setItem('ml-slides', JSON.stringify(light));
+    setSaveDot('saved', '추억 ' + slides.length + '장 저장됨 (사진 제외)');
+  } catch(e) {
+    setSaveDot('error', '저장 실패 — 용량 부족');
+  }
+}
+
+// 복원 ─ 앱 시작 시 호출
+function loadFromStorage(cb) {
+  openDB(function(database) {
+    if (!database) { loadFromLS(cb); return; }
+    var tx    = database.transaction('slides', 'readonly');
+    var store = tx.objectStore('slides');
+    var req   = store.getAll();
+    req.onsuccess = function(e) {
+      var rows = e.target.result;
+      if (rows && rows.length > 0) {
+        // id 순서로 정렬
+        rows.sort(function(a,b){ return a.id - b.id; });
+        slides = rows.map(function(r) {
+          return { photo:r.photo||null, when:r.when, who:r.who, story:r.story };
+        });
+        setSaveDot('saved', '추억 ' + slides.length + '장 불러옴');
+        updateUsage();
+        restoreCards();
+      } else {
+        loadFromLS(cb);
+        return;
+      }
+      if (cb) cb();
+    };
+    req.onerror = function() { loadFromLS(cb); };
+  });
+}
+
+function loadFromLS(cb) {
+  try {
+    var raw = localStorage.getItem('ml-slides');
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      slides = parsed.map(function(r) {
+        return { photo:null, when:r.when, who:r.who, story:r.story };
+      });
+      setSaveDot('saved', '추억 ' + slides.length + '장 불러옴 (사진 없음)');
+      restoreCards();
+    }
+  } catch(e) {}
+  if (cb) cb();
+}
+
+// 저장된 데이터로 카드 UI 복원
+function restoreCards() {
+  document.getElementById('card-list').innerHTML = '';
+  cardCount = 0;
+  if (slides.length === 0) { addCard(); return; }
+  slides.forEach(function(s, i) {
+    addCard();
+    var id = cardCount;
+    if (s.when)  document.getElementById('when-'  + id).value = s.when;
+    if (s.who)   document.getElementById('who-'   + id).value = s.who;
+    if (s.story) document.getElementById('story-' + id).value = s.story;
+    if (s.photo) {
+      photoData[id] = s.photo;
+      var prev = document.getElementById('prev-' + id);
+      prev.src = s.photo;
+      prev.style.display = 'block';
+      document.getElementById('drop-inner-' + id).style.display = 'none';
+    }
+  });
+}
+
+// 전체 삭제
+function clearStorage() {
+  if (!confirm('저장된 추억을 모두 삭제할까요?')) return;
+  openDB(function(database) {
+    if (database) {
+      var tx = database.transaction('slides', 'readwrite');
+      tx.objectStore('slides').clear();
+    }
+    localStorage.removeItem('ml-slides');
+  });
+  slides = [];
+  photoData = {};
+  document.getElementById('card-list').innerHTML = '';
+  cardCount = 0;
+  addCard();
+  setSaveDot('', '저장된 추억 없음');
+  document.getElementById('saveUsage').textContent = '';
+}
+
+// 상태 표시 헬퍼
+function setSaveDot(state, msg) {
+  var dot = document.getElementById('saveDot');
+  var msgEl = document.getElementById('saveMsg');
+  dot.className = 'save-dot' + (state ? ' ' + state : '');
+  if (msgEl) msgEl.textContent = msg;
+}
+
+function updateUsage() {
+  var usageEl = document.getElementById('saveUsage');
+  if (!usageEl) return;
+  // 대략적인 데이터 크기 계산
+  var total = slides.reduce(function(acc, s) {
+    return acc + (s.photo ? s.photo.length : 0) + (s.when||'').length + (s.who||'').length + (s.story||'').length;
+  }, 0);
+  var mb = (total / 1024 / 1024).toFixed(1);
+  usageEl.textContent = mb + ' MB 사용 중';
+}
+
+// ── STATE ──
+var slides = [];
+var cur = 0;
+var autoTimer = null;
+var progRaf = null;
+var progStart = null;
+var DURATION = 10000;
+var cardCount = 0;
+var photoData = {};
+
+// ── NAVIGATION ──
+function show(id) {
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.getElementById('view-' + id).classList.add('active');
+}
+
+function goGrandpa() {
+  if (slides.length === 0) {
+    slides = [
+      { photo:null, when:'오늘도 건강하세요',
+        story:'할아버지, 가족 모두 항상 할아버지 곁에 있어요.\n할아버지의 미소가 우리에게 가장 큰 힘이랍니다.', who:'' },
+      { photo:null, when:'언제나 보고 싶어요',
+        story:'할아버지께서 걸어오신 길이 우리 모두의 뿌리입니다.\n그 사랑과 지혜를 마음속 깊이 간직하고 있어요.', who:'온 가족이 함께' },
+      { photo:null, when:'사랑을 전하며',
+        story:'할아버지, 오늘 하루도 따뜻하게 보내세요.\n우리는 할아버지를 정말 많이 사랑합니다.', who:'' }
+    ];
+  }
+  render();
+  show('slideshow');
+  goTo(0);
+  startAuto();
+}
+
+// ── CARDS ──
+function addCard() {
+  cardCount++;
+  var id = cardCount;
+  var wrap = document.createElement('div');
+  wrap.className = 'memory-card';
+  wrap.id = 'mc-' + id;
+  wrap.innerHTML =
+    '<div class="card-head">' +
+      '<span class="card-num">추억 ' + id + '</span>' +
+      '<button class="del-btn" onclick="delCard(' + id + ')">✕ 삭제</button>' +
+    '</div>' +
+    '<div class="photo-drop" id="drop-' + id + '">' +
+      '<input type="file" accept="image/*" onchange="onPhoto(event,' + id + ')">' +
+      '<div class="drop-inner" id="drop-inner-' + id + '">' +
+        '<div class="drop-icon">🖼️</div>' +
+        '<div class="drop-text">사진을 눌러 선택하세요<br><small>없어도 괜찮아요</small></div>' +
+      '</div>' +
+      '<img class="photo-preview" id="prev-' + id + '">' +
+    '</div>' +
+    '<label class="lbl">언제, 어디서?</label>' +
+    '<input class="field" id="when-' + id + '" placeholder="예) 1978년 봄, 경주 여행">' +
+    '<label class="lbl">누가 함께?</label>' +
+    '<input class="field" id="who-' + id + '" placeholder="예) 할머니, 아빠(7살)">' +
+    '<label class="lbl">할아버지께 전하고 싶은 이야기</label>' +
+    '<div class="story-hint"><strong>💡 이렇게 써보세요</strong><br>"할아버지는 그날 웃으셨고 저는 뛰어다녔어요."</div>' +
+    '<textarea class="field" id="story-' + id + '" placeholder="그날의 기억, 할아버지의 모습, 전하고 싶은 말..."></textarea>';
+  document.getElementById('card-list').appendChild(wrap);
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function delCard(id) {
+  var el = document.getElementById('mc-' + id);
+  if (el) el.remove();
+}
+
+function onPhoto(e, id) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    photoData[id] = ev.target.result;
+    var prev = document.getElementById('prev-' + id);
+    prev.src = ev.target.result;
+    prev.style.display = 'block';
+    document.getElementById('drop-inner-' + id).style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function collect() {
+  var cards = document.querySelectorAll('.memory-card');
+  var result = [];
+  cards.forEach(function(card) {
+    var id = card.id.replace('mc-', '');
+    var when  = (document.getElementById('when-'  + id)||{value:''}).value.trim();
+    var who   = (document.getElementById('who-'   + id)||{value:''}).value.trim();
+    var story = (document.getElementById('story-' + id)||{value:''}).value.trim();
+    if (when || who || story || photoData[id]) {
+      result.push({ photo:photoData[id]||null, when:when, who:who, story:story });
+    }
+  });
+  return result;
+}
+
+function startShow() {
+  var data = collect();
+  if (data.length === 0) { alert('추억을 최소 한 개 이상 입력해 주세요 :)'); return; }
+  slides = data;
+  saveToStorage();
+  render();
+  show('slideshow');
+  goTo(0);
+  startAuto();
+}
+
+// ── RENDER ──
+function render() {
+  var area = document.getElementById('slideArea');
+  var dotsEl = document.getElementById('dots');
+  area.innerHTML = '';
+  dotsEl.innerHTML = '';
+
+  slides.forEach(function(s, i) {
+    var div = document.createElement('div');
+    div.className = 'slide' + (i===0?' active':'');
+    div.id = 'sl-' + i;
+
+    var frame = document.createElement('div');
+    frame.className = 'photo-frame';
+    if (s.photo) {
+      var img = document.createElement('img');
+      img.src = s.photo;
+      frame.appendChild(img);
+    } else {
+      var ph = document.createElement('div');
+      ph.className = 'no-photo';
+      ph.textContent = '📷';
+      frame.appendChild(ph);
+    }
+
+    var whenEl = document.createElement('div');
+    whenEl.className = 'slide-when';
+    whenEl.textContent = s.when || '소중한 추억';
+
+    var storyEl = document.createElement('div');
+    storyEl.className = 'slide-story';
+    storyEl.innerHTML = (s.story||'').replace(/\n/g,'<br>');
+
+    div.appendChild(frame);
+    div.appendChild(whenEl);
+    div.appendChild(storyEl);
+
+    if (s.who) {
+      var whoEl = document.createElement('div');
+      whoEl.className = 'slide-who';
+      whoEl.textContent = '— ' + s.who;
+      div.appendChild(whoEl);
+    }
+    area.appendChild(div);
+
+    var dot = document.createElement('div');
+    dot.className = 'dot' + (i===0?' active':'');
+    (function(idx){ dot.onclick = function(){ manualGoTo(idx); }; })(i);
+    dotsEl.appendChild(dot);
+  });
+}
+
+// ── PLAYBACK ──
+function goTo(idx) {
+  document.querySelectorAll('.slide').forEach(function(s,i){ s.classList.toggle('active',i===idx); });
+  document.querySelectorAll('.dot').forEach(function(d,i){ d.classList.toggle('active',i===idx); });
+  cur = idx;
+  document.getElementById('counter').textContent = (cur+1)+' / '+slides.length;
+  startProg();
+}
+
+function manualGoTo(idx) {
+  clearInterval(autoTimer);
+  goTo(idx);
+  startAuto();
+}
+
+function next() { manualGoTo((cur+1)%slides.length); }
+function prev() { manualGoTo((cur-1+slides.length)%slides.length); }
+
+function startAuto() {
+  clearInterval(autoTimer);
+  autoTimer = setInterval(function(){ goTo((cur+1)%slides.length); }, DURATION);
+}
+
+function startProg() {
+  cancelAnimationFrame(progRaf);
+  var bar = document.getElementById('progBar');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  progStart = performance.now();
+  function tick(now) {
+    var pct = Math.min((now - progStart) / DURATION * 100, 100);
+    bar.style.width = pct + '%';
+    if (pct < 100) progRaf = requestAnimationFrame(tick);
+  }
+  progRaf = requestAnimationFrame(tick);
+}
+
+// ── INIT ──
+loadFromStorage(function() {
+  if (slides.length === 0) addCard();
+});
+</script>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<script>
+// ══════════════════════════════
+//  FIREBASE MODULE
+// ══════════════════════════════
+var fbApp      = null;
+var fbDb       = null;
+var fbStorage  = null;
+var fbRoomCode = '';
+var fbListener = null;   // onSnapshot 해제용
+var fbEnabled  = false;
+
+var LS_FB_KEY = 'ml-firebase-config';
+
+// 저장된 Firebase 설정 불러와 자동 연결
+function initFirebaseFromStorage() {
+  try {
+    var raw = localStorage.getItem(LS_FB_KEY);
+    if (!raw) return;
+    var cfg = JSON.parse(raw);
+    if (cfg.apiKey && cfg.projectId && cfg.appId && cfg.roomCode) {
+      document.getElementById('fb-apiKey').value    = cfg.apiKey;
+      document.getElementById('fb-projectId').value = cfg.projectId;
+      document.getElementById('fb-appId').value     = cfg.appId;
+      document.getElementById('fb-roomCode').value  = cfg.roomCode;
+      connectFirebase(true); // silent=true
+    }
+  } catch(e) {}
+}
+
+function connectFirebase(silent) {
+  var apiKey    = document.getElementById('fb-apiKey').value.trim();
+  var projectId = document.getElementById('fb-projectId').value.trim();
+  var appId     = document.getElementById('fb-appId').value.trim();
+  var roomCode  = (document.getElementById('fb-roomCode').value.trim()).toUpperCase();
+
+  if (!apiKey || !projectId || !appId || !roomCode) {
+    if (!silent) alert('모든 항목을 입력해 주세요.');
+    return;
+  }
+
+  var btn = document.getElementById('fbConnectBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '연결 중...'; }
+
+  try {
+    // 기존 앱 정리
+    if (fbApp) { fbApp.delete().catch(function(){}); }
+
+    var firebaseConfig = {
+      apiKey:    apiKey,
+      projectId: projectId,
+      appId:     appId,
+      authDomain:     projectId + '.firebaseapp.com',
+      storageBucket:  projectId + '.appspot.com',
+    };
+
+    fbApp      = firebase.initializeApp(firebaseConfig, 'memory-link-' + Date.now());
+    fbDb       = firebase.firestore(fbApp);
+    fbStorage  = firebase.storage(fbApp);
+    fbRoomCode = roomCode;
+    fbEnabled  = true;
+
+    // 설정 저장
+    localStorage.setItem(LS_FB_KEY, JSON.stringify({ apiKey, projectId, appId, roomCode }));
+
+    // 연결 확인 — 빈 write 테스트
+    fbDb.collection('rooms').doc(fbRoomCode)
+      .set({ lastActive: Date.now(), agent: navigator.userAgent.slice(0,40) }, { merge: true })
+      .then(function() {
+        setCloudStatus('on', '공유 중');
+        showRoomBanner(roomCode);
+        subscribeRoom();
+        if (!silent) { show('upload'); showToast('✅ 가족 공유 연결됨'); }
+        if (btn) { btn.disabled = false; btn.textContent = '연결하기'; }
+      })
+      .catch(function(e) {
+        fbEnabled = false;
+        setCloudStatus('err', '연결 실패');
+        if (!silent) alert('Firebase 연결 실패:\n' + e.message);
+        if (btn) { btn.disabled = false; btn.textContent = '다시 시도'; }
+      });
+  } catch(e) {
+    fbEnabled = false;
+    setCloudStatus('err', '오류');
+    if (!silent) alert('설정값 오류:\n' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '연결하기'; }
+  }
+}
+
+// 룸 실시간 구독 — 다른 가족이 올린 슬라이드 자동 수신
+function subscribeRoom() {
+  if (fbListener) { fbListener(); fbListener = null; }
+  fbListener = fbDb.collection('rooms').doc(fbRoomCode)
+    .collection('slides').orderBy('order')
+    .onSnapshot(function(snapshot) {
+      if (snapshot.empty) return;
+      var incoming = [];
+      snapshot.forEach(function(doc) {
+        incoming.push(doc.data());
+      });
+      // 현재 로컬과 다를 때만 업데이트
+      if (JSON.stringify(incoming.map(function(s){ return s.story+s.when; }))
+       !== JSON.stringify(slides.map(function(s){ return s.story+s.when; }))) {
+        slides = incoming.map(function(s) {
+          return { photo: s.photo||null, when: s.when||'', who: s.who||'', story: s.story||'' };
+        });
+        saveToStorage();
+        restoreCards();
+        showToast('📲 가족이 추억을 업데이트했어요');
+      }
+    }, function(err) {
+      setCloudStatus('err', '동기화 오류');
+    });
+}
+
+// 슬라이드 Firebase에 업로드 (사진은 Storage에)
+function uploadToFirebase(callback) {
+  if (!fbEnabled || !fbDb) { if(callback) callback(); return; }
+  setCloudStatus('on', '업로드 중...');
+
+  var col = fbDb.collection('rooms').doc(fbRoomCode).collection('slides');
+
+  // 기존 슬라이드 전부 삭제 후 재업로드
+  col.get().then(function(snapshot) {
+    var batch = fbDb.batch();
+    snapshot.forEach(function(doc) { batch.delete(doc.ref); });
+    return batch.commit();
+  }).then(function() {
+    // 사진 Storage 업로드 + Firestore 저장
+    var promises = slides.map(function(s, i) {
+      if (s.photo && s.photo.startsWith('data:')) {
+        // base64 → Storage
+        var ref = fbStorage.ref(fbRoomCode + '/slide-' + i + '.jpg');
+        return ref.putString(s.photo, 'data_url')
+          .then(function(snap) { return snap.ref.getDownloadURL(); })
+          .then(function(url) {
+            return col.doc('slide-' + i).set({
+              order: i, when: s.when, who: s.who, story: s.story, photo: url
+            });
+          });
+      } else {
+        return col.doc('slide-' + i).set({
+          order: i, when: s.when, who: s.who, story: s.story, photo: s.photo || null
+        });
+      }
+    });
+    return Promise.all(promises);
+  }).then(function() {
+    setCloudStatus('on', '공유 중');
+    showToast('☁️ 가족과 공유됨');
+    if (callback) callback();
+  }).catch(function(e) {
+    setCloudStatus('err', '업로드 실패');
+    showToast('⚠️ 공유 실패: ' + e.message);
+    if (callback) callback();
+  });
+}
+
+// ── UI 헬퍼 ──
+function setCloudStatus(state, label) {
+  var dot   = document.getElementById('cloudDot');
+  var lbl   = document.getElementById('cloudLabel');
+  if (dot) dot.className = 'cloud-dot' + (state ? ' ' + state : '');
+  if (lbl) lbl.textContent = label || '공유 설정';
+}
+
+function showRoomBanner(code) {
+  var banner = document.getElementById('roomBanner');
+  var display = document.getElementById('roomCodeDisplay');
+  if (banner)  banner.classList.add('show');
+  if (display) display.textContent = code;
+}
+
+function copyRoomCode() {
+  navigator.clipboard.writeText(fbRoomCode).then(function() {
+    showToast('📋 코드 복사됨: ' + fbRoomCode);
+  }).catch(function() {
+    prompt('룸 코드를 복사하세요:', fbRoomCode);
+  });
+}
+
+var toastTimer = null;
+function showToast(msg) {
+  var el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+
+// ── startShow 오버라이드: Firebase 업로드 후 슬라이드쇼 ──
+var _origStartShow = startShow;
+startShow = function() {
+  var data = collect();
+  if (data.length === 0) { alert('추억을 최소 한 개 이상 입력해 주세요 :)'); return; }
+  slides = data;
+  saveToStorage();
+  if (fbEnabled) {
+    uploadToFirebase(function() {
+      render(); show('slideshow'); goTo(0); startAuto();
+    });
+  } else {
+    render(); show('slideshow'); goTo(0); startAuto();
+  }
+};
+
+// INIT에 Firebase 자동 연결 추가
+var _origLoad = loadFromStorage;
+document.addEventListener('DOMContentLoaded', function() {
+  initFirebaseFromStorage();
+});
+</script>
+
+</body>
+</html>
