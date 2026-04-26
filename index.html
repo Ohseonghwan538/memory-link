@@ -365,29 +365,15 @@ textarea.field { resize:vertical; min-height:76px; }
 <!-- FIREBASE SETUP -->
 <div class="view" id="view-setup">
   <div class="setup-inner">
-    <h2 class="setup-title">가족 공유 설정</h2>
-    <p class="setup-sub">Firebase를 연결하면 가족 모두가<br>같은 추억을 함께 볼 수 있어요</p>
+    <h2 class="setup-title">가족 공유 연결</h2>
+    <p class="setup-sub">연결하면 가족이 올린 사진을<br>할아버지께서 바로 보실 수 있어요</p>
 
     <div class="setup-card">
-      <div class="setup-card-title">Firebase 설정값 입력</div>
-      <input class="setup-field" id="fb-apiKey"     placeholder="apiKey">
-      <input class="setup-field" id="fb-projectId"  placeholder="projectId">
-      <input class="setup-field" id="fb-appId"      placeholder="appId">
-      <p class="setup-hint">
-        <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a>
-        → 프로젝트 설정 → 앱 → SDK 구성에서 복사하세요
-      </p>
+      <div class="setup-card-title">연결 상태</div>
+      <p class="setup-hint" style="margin:0">가족 공유방: <strong style="color:var(--gold)">할아버지</strong><br>아래 버튼을 누르면 자동으로 연결됩니다</p>
     </div>
 
-    <div class="setup-card">
-      <div class="setup-card-title">룸 코드</div>
-      <input class="setup-field" id="fb-roomCode"
-             placeholder="예) GRANDPA-2024  (가족이 같은 코드 사용)"
-             style="letter-spacing:.1em; text-transform:uppercase">
-      <p class="setup-hint">가족 모두 같은 코드를 쓰면 자동으로 동기화돼요</p>
-    </div>
-
-    <button class="btn-setup-primary" id="fbConnectBtn" onclick="connectFirebase()">연결하기</button>
+    <button class="btn-setup-primary" id="fbConnectBtn" onclick="connectFirebase()">가족 공유 연결하기</button>
     <button class="btn-setup-back"    onclick="show('landing')">← 취소</button>
   </div>
 </div>
@@ -895,60 +881,49 @@ function initFirebaseFromStorage() {
   try {
     var raw = localStorage.getItem(LS_FB_KEY);
     if (!raw) return;
+    // 이미 연결된 적 있으면 자동 재연결
     var cfg = JSON.parse(raw);
-    if (cfg.apiKey && cfg.projectId && cfg.appId && cfg.roomCode) {
-      document.getElementById('fb-apiKey').value    = cfg.apiKey;
-      document.getElementById('fb-projectId').value = cfg.projectId;
-      document.getElementById('fb-appId').value     = cfg.appId;
-      document.getElementById('fb-roomCode').value  = cfg.roomCode;
-      connectFirebase(true); // silent=true
-    }
+    if (cfg.connected) { connectFirebase(true); }
   } catch(e) {}
 }
 
+// 앱에 내장된 Firebase 설정 (가족 공유용 고정값)
+var FB_CONFIG = {
+  apiKey:    'AIzaSyC8PPLQS1H8GdwisCGzN1pmfEKJx1nMvJQ',
+  projectId: 'memory-link-5a665',
+  appId:     '1:1052674877640:web:2bac531e71ce381bcb5dfd'
+};
+var FB_ROOM = '할아버지';
+
 function connectFirebase(silent) {
-  var apiKey    = document.getElementById('fb-apiKey').value.trim();
-  var projectId = document.getElementById('fb-projectId').value.trim();
-  var appId     = document.getElementById('fb-appId').value.trim();
-  var roomCode  = (document.getElementById('fb-roomCode').value.trim()).toUpperCase();
-
-  if (!apiKey || !projectId || !appId || !roomCode) {
-    if (!silent) alert('모든 항목을 입력해 주세요.');
-    return;
-  }
-
   var btn = document.getElementById('fbConnectBtn');
   if (btn) { btn.disabled = true; btn.textContent = '연결 중...'; }
 
   try {
-    // 기존 앱 정리
     if (fbApp) { fbApp.delete().catch(function(){}); }
 
     var firebaseConfig = {
-      apiKey:    apiKey,
-      projectId: projectId,
-      appId:     appId,
-      authDomain:     projectId + '.firebaseapp.com',
-      storageBucket:  projectId + '.appspot.com',
+      apiKey:     FB_CONFIG.apiKey,
+      projectId:  FB_CONFIG.projectId,
+      appId:      FB_CONFIG.appId,
+      authDomain: FB_CONFIG.projectId + '.firebaseapp.com',
     };
 
     fbApp      = firebase.initializeApp(firebaseConfig, 'memory-link-' + Date.now());
     fbDb       = firebase.firestore(fbApp);
-    fbRoomCode = roomCode;
+    fbRoomCode = FB_ROOM;
     fbEnabled  = true;
 
-    // 설정 저장
-    localStorage.setItem(LS_FB_KEY, JSON.stringify({ apiKey, projectId, appId, roomCode }));
+    localStorage.setItem(LS_FB_KEY, JSON.stringify({ connected: true }));
 
-    // 연결 확인 — 빈 write 테스트
     fbDb.collection('rooms').doc(fbRoomCode)
       .set({ lastActive: Date.now(), agent: navigator.userAgent.slice(0,40) }, { merge: true })
       .then(function() {
         setCloudStatus('on', '공유 중');
-        showRoomBanner(roomCode);
+        showRoomBanner(FB_ROOM);
         subscribeRoom();
         if (!silent) { show('upload'); showToast('✅ 가족 공유 연결됨'); }
-        if (btn) { btn.disabled = false; btn.textContent = '연결하기'; }
+        if (btn) { btn.disabled = false; btn.textContent = '가족 공유 연결하기'; }
       })
       .catch(function(e) {
         fbEnabled = false;
@@ -959,8 +934,8 @@ function connectFirebase(silent) {
   } catch(e) {
     fbEnabled = false;
     setCloudStatus('err', '오류');
-    if (!silent) alert('설정값 오류:\n' + e.message);
-    if (btn) { btn.disabled = false; btn.textContent = '연결하기'; }
+    if (!silent) alert('설정 오류:\n' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '가족 공유 연결하기'; }
   }
 }
 
