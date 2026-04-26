@@ -878,14 +878,12 @@ loadFromStorage(function() {
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script>
 // ══════════════════════════════
 //  FIREBASE MODULE
 // ══════════════════════════════
 var fbApp      = null;
 var fbDb       = null;
-var fbStorage  = null;
 var fbRoomCode = '';
 var fbListener = null;   // onSnapshot 해제용
 var fbEnabled  = false;
@@ -936,7 +934,6 @@ function connectFirebase(silent) {
 
     fbApp      = firebase.initializeApp(firebaseConfig, 'memory-link-' + Date.now());
     fbDb       = firebase.firestore(fbApp);
-    fbStorage  = firebase.storage(fbApp);
     fbRoomCode = roomCode;
     fbEnabled  = true;
 
@@ -993,38 +990,56 @@ function subscribeRoom() {
     });
 }
 
-// 슬라이드 Firebase에 업로드 (사진은 Storage에)
+// 사진을 800px 이하, JPEG 70% 품질로 압축 (Firestore 직접 저장용)
+function compressPhoto(dataUrl, cb) {
+  var img = new Image();
+  img.onload = function() {
+    var MAX = 800;
+    var w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+      else       { w = Math.round(w * MAX / h); h = MAX; }
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    cb(canvas.toDataURL('image/jpeg', 0.70));
+  };
+  img.onerror = function() { cb(dataUrl); };
+  img.src = dataUrl;
+}
+
+// 슬라이드 Firebase에 업로드 (Storage 없이 Firestore에 직접 저장)
 function uploadToFirebase(callback) {
   if (!fbEnabled || !fbDb) { if(callback) callback(); return; }
   setCloudStatus('on', '업로드 중...');
 
   var col = fbDb.collection('rooms').doc(fbRoomCode).collection('slides');
 
-  // 기존 슬라이드 전부 삭제 후 재업로드
-  col.get().then(function(snapshot) {
-    var batch = fbDb.batch();
-    snapshot.forEach(function(doc) { batch.delete(doc.ref); });
-    return batch.commit();
-  }).then(function() {
-    // 사진 Storage 업로드 + Firestore 저장
-    var promises = slides.map(function(s, i) {
+  // 사진 압축 후 Firestore에 직접 저장
+  var tasks = slides.map(function(s) {
+    return new Promise(function(resolve) {
       if (s.photo && s.photo.startsWith('data:')) {
-        // base64 → Storage
-        var ref = fbStorage.ref(fbRoomCode + '/slide-' + i + '.jpg');
-        return ref.putString(s.photo, 'data_url')
-          .then(function(snap) { return snap.ref.getDownloadURL(); })
-          .then(function(url) {
-            return col.doc('slide-' + i).set({
-              order: i, when: s.when, who: s.who, story: s.story, photo: url
-            });
-          });
-      } else {
-        return col.doc('slide-' + i).set({
-          order: i, when: s.when, who: s.who, story: s.story, photo: s.photo || null
+        compressPhoto(s.photo, function(compressed) {
+          resolve({ photo: compressed, when: s.when, who: s.who, story: s.story });
         });
+      } else {
+        resolve({ photo: s.photo || null, when: s.when, who: s.who, story: s.story });
       }
     });
-    return Promise.all(promises);
+  });
+
+  Promise.all(tasks).then(function(compressed) {
+    return col.get().then(function(snapshot) {
+      var batch = fbDb.batch();
+      snapshot.forEach(function(doc) { batch.delete(doc.ref); });
+      return batch.commit();
+    }).then(function() {
+      var promises = compressed.map(function(s, i) {
+        return col.doc('slide-' + i).set({ order: i, when: s.when, who: s.who, story: s.story, photo: s.photo });
+      });
+      return Promise.all(promises);
+    });
   }).then(function() {
     setCloudStatus('on', '공유 중');
     showToast('☁️ 가족과 공유됨');
